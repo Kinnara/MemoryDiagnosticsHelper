@@ -20,7 +20,7 @@ namespace MemoryDiagnostics
         static TextBlock peakMemoryBlock;
         static DispatcherTimer timer;
         static bool forceGc;
-        static long maxMemory = GetMaxMemory();
+        static long maxMemory = DeviceStatus.ApplicationMemoryUsageLimit;
         static int lastSafetyBand = -1; // to avoid needless changes of colour
 
         const long MAX_CHECKPOINTS = 10; // adjust as needed
@@ -215,23 +215,6 @@ namespace MemoryDiagnostics
         {
             popup.IsOpen = false;
             popup = null;
-        }
-
-        private static long GetMaxMemory()
-        {
-#if DEBUG
-            try
-            {
-                // don't use DeviceExtendedProperties for release builds (requires a capability)
-                return (long)DeviceExtendedProperties.GetValue("ApplicationWorkingSetLimit");
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return 90 * 1024 * 1024;
-            }
-#else
-            return 0;
-#endif
         }
     }
 
