@@ -125,9 +125,9 @@ namespace MemoryDiagnostics
             currentMemoryBlock = new TextBlock { Text = "---", FontSize = fontSize, Foreground = foreground };
             peakMemoryBlock = new TextBlock { Text = "", FontSize = fontSize, Foreground = foreground, Margin = new Thickness(5, 0, 0, 0) };
             sp.Children.Add(currentMemoryBlock);
-            sp.Children.Add(new TextBlock { Text = " kb", FontSize = fontSize, Foreground = foreground });
+            sp.Children.Add(new TextBlock { Text = " KB", FontSize = fontSize, Foreground = foreground });
             sp.Children.Add(peakMemoryBlock);
-            sp.RenderTransform = new CompositeTransform { Rotation = 90, TranslateX = 480, TranslateY = 425, CenterX = 0, CenterY = 0 };
+            sp.RenderTransform = new CompositeTransform { Rotation = 90, TranslateX = 483, TranslateY = 425, CenterX = 0, CenterY = 0 };
             popup.Child = sp;
             popup.IsOpen = true;
         }
@@ -219,14 +219,19 @@ namespace MemoryDiagnostics
 
         private static long GetMaxMemory()
         {
+#if DEBUG
             try
             {
+                // don't use DeviceExtendedProperties for release builds (requires a capability)
                 return (long)DeviceExtendedProperties.GetValue("ApplicationWorkingSetLimit");
             }
             catch (ArgumentOutOfRangeException)
             {
                 return 90 * 1024 * 1024;
             }
+#else
+            return 0;
+#endif
         }
     }
 
