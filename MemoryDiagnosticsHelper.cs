@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -19,7 +21,7 @@ namespace MemoryDiagnostics
         static TextBlock currentMemoryBlock;
         static TextBlock peakMemoryBlock;
         static DispatcherTimer timer;
-        static bool forceGc;
+        static bool forceGC;
         static long maxMemory = DeviceStatus.ApplicationMemoryUsageLimit;
         static int lastSafetyBand = -1; // to avoid needless changes of colour
 
@@ -32,14 +34,13 @@ namespace MemoryDiagnostics
         /// Starts the memory diagnostic timer and shows the counter
         /// </summary>
         /// <param name="timespan">The timespan between counter updates</param>
-        /// <param name="forceGc">Whether or not to force a GC before collecting memory stats</param>
-        [Conditional("DEBUG")]
-        public static void Start(TimeSpan timespan, bool forceGc)
+        /// <param name="forceGC">Whether or not to force a GC before collecting memory stats</param>
+        public static void Start(TimeSpan timespan, bool forceGC)
         {
             if (timer != null)
                 throw new InvalidOperationException("Diagnostics already running");
 
-            MemoryDiagnosticsHelper.forceGc = forceGc;
+            MemoryDiagnosticsHelper.forceGC = forceGC;
             recentCheckpoints = new Queue<MemoryCheckpoint>();
 
             StartTimer(timespan);
@@ -89,33 +90,26 @@ namespace MemoryDiagnostics
         }
 
         /// <summary>
-        /// Gets the current memory usage, in bytes. Returns zero in non-debug mode
+        /// Gets the current memory usage, in bytes.
         /// </summary>
         /// <returns>Current usage</returns>
+        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public static long GetCurrentMemoryUsage()
         {
-#if DEBUG
-            // don't use DeviceExtendedProperties for release builds (requires a capability)
-            return (long)DeviceExtendedProperties.GetValue("ApplicationCurrentMemoryUsage");
-#else
-      return 0;
-#endif
+            return DeviceStatus.ApplicationCurrentMemoryUsage;
         }
 
         /// <summary>
-        /// Gets the peak memory usage, in bytes. Returns zero in non-debug mode
+        /// Gets the peak memory usage, in bytes.
         /// </summary>
         /// <returns>Peak memory usage</returns>
+        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public static long GetPeakMemoryUsage()
         {
-#if DEBUG
-            // don't use DeviceExtendedProperties for release builds (requires a capability)
-            return (long)DeviceExtendedProperties.GetValue("ApplicationPeakMemoryUsage");
-#else
-      return 0;
-#endif
+            return DeviceStatus.ApplicationPeakMemoryUsage;
         }
 
+        [SuppressMessage("Microsoft.Globalization", "CA1303:Do not pass literals as localized parameters", MessageId = "System.Windows.Controls.TextBlock.set_Text(System.String)")]
         private static void ShowPopup()
         {
             popup = new Popup();
@@ -140,15 +134,17 @@ namespace MemoryDiagnostics
             timer.Start();
         }
 
+        [SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.GC.Collect")]
         static void timer_Tick(object sender, EventArgs e)
         {
-            if (forceGc)
+            if (forceGC)
                 GC.Collect();
 
             UpdateCurrentMemoryUsage();
             UpdatePeakMemoryUsage();
         }
 
+        [SuppressMessage("Microsoft.Globalization", "CA1303:Do not pass literals as localized parameters", MessageId = "System.Windows.Controls.TextBlock.set_Text(System.String)")]
         private static void UpdatePeakMemoryUsage()
         {
             if (alreadyFailedPeak)
@@ -169,7 +165,7 @@ namespace MemoryDiagnostics
         private static void UpdateCurrentMemoryUsage()
         {
             long mem = GetCurrentMemoryUsage();
-            currentMemoryBlock.Text = string.Format("{0:N}", mem / 1024);
+            currentMemoryBlock.Text = string.Format(CultureInfo.CurrentCulture, "{0:N}", mem / 1024);
             int safetyBand = GetSafetyBand(mem);
             if (safetyBand != lastSafetyBand)
             {
