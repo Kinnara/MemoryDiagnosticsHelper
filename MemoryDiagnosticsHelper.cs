@@ -20,7 +20,7 @@ namespace MemoryDiagnostics
         static TextBlock peakMemoryBlock;
         static DispatcherTimer timer;
         static bool forceGc;
-        const long MAX_MEMORY = 90 * 1024 * 1024; // 90MB, per marketplace
+        static long maxMemory = GetMaxMemory();
         static int lastSafetyBand = -1; // to avoid needless changes of colour
 
         const long MAX_CHECKPOINTS = 10; // adjust as needed
@@ -155,7 +155,7 @@ namespace MemoryDiagnostics
                 return;
 
             long peak = GetPeakMemoryUsage();
-            if (peak >= MAX_MEMORY)
+            if (peak >= maxMemory)
             {
                 alreadyFailedPeak = true;
                 Checkpoint("*MEMORY USAGE FAIL*");
@@ -195,7 +195,7 @@ namespace MemoryDiagnostics
 
         private static int GetSafetyBand(long mem)
         {
-            double percent = (double)mem / (double)MAX_MEMORY;
+            double percent = (double)mem / (double)maxMemory;
             if (percent <= 0.75)
                 return 0;
 
@@ -215,6 +215,18 @@ namespace MemoryDiagnostics
         {
             popup.IsOpen = false;
             popup = null;
+        }
+
+        private static long GetMaxMemory()
+        {
+            try
+            {
+                return (long)DeviceExtendedProperties.GetValue("ApplicationWorkingSetLimit");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return 90 * 1024 * 1024;
+            }
         }
     }
 
